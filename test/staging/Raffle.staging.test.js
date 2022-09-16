@@ -1,30 +1,31 @@
 const { assert, expect } = require("chai")
-const { getNamedAccounts, deployments, ethers, network } = require("hardhat")
-const { developmentChains, networkConfig } = require("../../helper-hardhat-config")
+const { getNamedAccounts, ethers, network } = require("hardhat")
+const { developmentChains } = require("../../helper-hardhat-config")
 
 developmentChains.includes(network.name)
     ? describe.skip
-    : describe("Raffle unit tests", function () {
-          let raffle, raffleEntranceFee, deployer //interval
+    : describe("Raffle Staging Tests", function () {
+          let raffle, raffleEntranceFee, deployer
 
           beforeEach(async function () {
               deployer = (await getNamedAccounts()).deployer
-
               raffle = await ethers.getContract("Raffle", deployer)
-
               raffleEntranceFee = await raffle.getEntranceFee()
-              // interval = await raffle.getInterval()
           })
-          describe("fulfillRandomsWords", function () {
-              it("works with live chainlink keepers and chainlink VRF, we get a random winner", async function () {
-                  const startingTimestamp = await raffle.getLatestTimeStamp()
+
+          describe("fulfillRandomWords", function () {
+              it("works with live Chainlink Keepers and Chainlink VRF, we get a random winner", async function () {
+                  // enter the raffle
+                  console.log("Setting up test...")
+                  const startingTimeStamp = await raffle.getLatestTimeStamp()
                   const accounts = await ethers.getSigners()
-                  // setup listener before we enter the raffle
-                  // just incase the blockchains moves really fast
-                  // different in mock tsting where we can manipulate the blocks
+
+                  console.log("Setting up Listener...")
                   await new Promise(async (resolve, reject) => {
+                      // setup listener before we enter the raffle
+                      // Just in case the blockchain moves REALLY fast
                       raffle.once("WinnerPicked", async () => {
-                          console.log("WinnerPicked event fired up")
+                          console.log("WinnerPicked event fired!")
                           try {
                               // add our asserts here
                               const recentWinner = await raffle.getRecentWinner()
@@ -39,22 +40,21 @@ developmentChains.includes(network.name)
                                   winnerEndingBalance.toString(),
                                   winnerStartingBalance.add(raffleEntranceFee).toString()
                               )
-                              assert(endingTimeStamp > startingTimestamp)
+                              assert(endingTimeStamp > startingTimeStamp)
                               resolve()
                           } catch (error) {
                               console.log(error)
-                              reject(e)
+                              reject(error)
                           }
                       })
-
-                      // then entering the  raffle
-
+                      // Then entering the raffle
                       console.log("Entering Raffle...")
                       const tx = await raffle.enterRaffle({ value: raffleEntranceFee })
                       await tx.wait(1)
                       console.log("Ok, time to wait...")
                       const winnerStartingBalance = await accounts[0].getBalance()
-                      // And this code will not complete until our listener has finished listening
+
+                      // and this code WONT complete until our listener has finished listening!
                   })
               })
           })
